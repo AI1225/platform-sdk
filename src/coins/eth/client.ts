@@ -33,7 +33,27 @@ export class Ethereum implements Client {
 	}
 
 	public async getTransactions(query?: KeyValuePair): Promise<CollectionResponse<Transaction>> {
-		throw new NotImplemented(this.constructor.name, "getTransactions");
+		const endBlock: number = await this.#connection.eth.getBlockNumber();
+		const startBlock: number = endBlock - 8640; // 24 hours
+
+		const transactions: Transaction[] = [];
+		for (let i = startBlock; i < endBlock; i++) {
+			const block = await this.#connection.eth.getBlock(i, true);
+
+			if (block && block.transactions) {
+				for (const transaction of block.transactions) {
+					if (
+						query?.address === "*" ||
+						query?.address === transaction.from ||
+						query?.address === transaction.to
+					) {
+						transactions.push(new Transaction(transaction));
+					}
+				}
+			}
+		}
+
+		return { meta: {}, data: transactions };
 	}
 
 	public async searchTransactions(query: KeyValuePair): Promise<CollectionResponse<Transaction>> {
